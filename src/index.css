@@ -1,15 +1,51 @@
 @import "tailwindcss";
 
+
 @layer base {
   html {
     scroll-behavior: smooth;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    /* Prevent horizontal scroll on mobile caused by overflow content */
-    overflow-x: hidden;
-    /* Ensure text never breaks the layout on small screens */
-    overflow-wrap: break-word;
-    word-break: break-word;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+      'Helvetica Neue', sans-serif;
+    overflow-x: clip;
   }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+    margin: 0;
+    min-width: 0;
+  }
+
+  /* Allow long identifiers to wrap only where necessary */
+  input,
+  textarea,
+  td,
+  th {
+    overflow-wrap: anywhere;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
+  }
+}
+
 
   body {
     -webkit-font-smoothing: antialiased;
@@ -39,7 +75,7 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.7);
   }
-}
+
 
 /* =====================================================
    AUTH PAGES - Beautiful campus backdrop with overlay
@@ -269,4 +305,31 @@
 }
 .sidebar-slide-in {
   animation: slideIn 0.3s ease-out;
+}
+
+/* Exam page: mobile responsiveness */
+@media (max-width: 768px) {
+  .exam-header,
+  .exam-content,
+  .exam-subject-title {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .exam-subject-title {
+    width: 100%;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    writing-mode: horizontal-tb;
+  }
+
+  .exam-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+  }
 }
