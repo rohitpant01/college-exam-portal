@@ -81,6 +81,7 @@ export default function TakeExam() {
   // Anti-Cheat & Tab Switch Tracking
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [showViolationModal, setShowViolationModal] = useState(false)
+  const [violationMessage, setViolationMessage] = useState('')
   const tabSwitchCountRef = useRef(0)
 
   // Use refs to avoid stale closures in interval / listeners
@@ -403,35 +404,40 @@ export default function TakeExam() {
     }
   }, [examStarted, isSubmitting, handleFinalSubmit])
 
-  // 5. Anti-Cheat: Tab-Switch & Blur Detection (Auto-submit after 2 attempts)
+  // 5. Anti-Cheat: Fullscreen Exit & Tab-Switch Detection (Auto-submit after 2 attempts)
   useEffect(() => {
     if (!examStarted || isSubmitting) return
 
-    let lastSwitchTime = 0
+    let lastViolationTime = 0
 
-    const triggerSwitchViolation = () => {
+    const triggerViolation = (reason = 'fullscreen_or_tab') => {
       if (isSubmittingRef.current) return
 
       const now = Date.now()
-      // Debounce events if visibilitychange and blur fire together within 1.5 seconds
-      if (now - lastSwitchTime < 1500) return
-      lastSwitchTime = now
+      // Debounce events if visibilitychange, blur, and fullscreenchange fire within 1.5s
+      if (now - lastViolationTime < 1500) return
+      lastViolationTime = now
 
       const nextCount = tabSwitchCountRef.current + 1
       tabSwitchCountRef.current = nextCount
       setTabSwitchCount(nextCount)
 
       if (nextCount === 1) {
-        // Attempt 1: Show warning alert modal
+        // Attempt 1: Show warning alert modal and inform student
+        const msg =
+          reason === 'fullscreen'
+            ? 'Exiting fullscreen is not allowed during the exam. Please return to fullscreen immediately.'
+            : 'Tab switching, minimizing, or exiting fullscreen is strictly prohibited!'
+        setViolationMessage(msg)
         setShowViolationModal(true)
-        toast.error('Warning 1/2: Tab switching is strictly prohibited! Another attempt will auto-submit your exam.', {
+        toast.error('Warning 1/2: Fullscreen exit or tab switch detected! One more attempt will auto-submit your exam.', {
           duration: 7000,
           icon: '⚠️'
         })
       } else if (nextCount >= 2) {
         // Attempt 2: Auto-submit exam immediately
         setShowViolationModal(false)
-        toast.error('Violation limit reached! You switched tabs twice. Your exam is being automatically submitted.', {
+        toast.error('Violation limit reached (Attempt 2/2)! Your exam is being automatically submitted.', {
           duration: 8000,
           icon: '🛑'
         })
@@ -441,18 +447,22 @@ export default function TakeExam() {
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        triggerSwitchViolation()
+        triggerViolation('tab')
       }
     }
 
     const handleWindowBlur = () => {
       // Fires if student focuses outside browser (switching application or window)
-      triggerSwitchViolation()
+      triggerViolation('blur')
     }
 
     const handleFullScreenChange = () => {
       const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement)
       setIsFullScreen(active)
+      // If user exited fullscreen while exam is active and not yet submitting
+      if (!active && !isSubmittingRef.current) {
+        triggerViolation('fullscreen')
+      }
     }
 
     const handleBeforeUnload = (e) => {
@@ -1094,6 +1104,51 @@ export default function TakeExam() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anti-Cheat Warning Modal (Attempt 1 of 2) */}
+      {showViolationModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-red-500 max-w-md w-full p-6 text-center space-y-5 animate-in zoom-in-95 duration-150 relative">
+            <div className="w-16 h-16 rounded-2xl bg-red-100 border border-red-200 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <ShieldAlert className="w-9 h-9 animate-pulse" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200">
+                Security Warning: Attempt 1 / 2
+              </span>
+              <h3 className="text-xl font-bold text-slate-900">
+                Exam Security Violation Detected!
+              </h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                {violationMessage || 'Exiting fullscreen or switching windows during an exam is strictly forbidden.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-left text-xs text-amber-900 space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                Final Caution:
+              </p>
+              <p>
+                If you exit fullscreen, switch tabs, or minimize the window <strong>one more time (Attempt 2/2)</strong>, your examination will be <strong>automatically submitted immediately</strong> with no further warning.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setShowViolationModal(false)
+                await requestFullScreen()
+              }}
+              className="w-full py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-md shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Maximize className="w-4 h-4" />
+              <span>I Understand & Return to Fullscreen</span>
+            </button>
           </div>
         </div>
       )}
