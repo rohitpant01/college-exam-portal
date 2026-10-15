@@ -97,6 +97,31 @@ create policy "Public profiles are viewable by everyone" on profiles for select 
 create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
 create policy "Users can insert own profile" on profiles for insert with check (auth.uid() = id);
 
+-- Trigger to automatically insert a profile row when a new user signs up in auth.users
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, full_name, email, role, enrollment_no)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', 'Student'),
+    new.email,
+    'student',
+    new.raw_user_meta_data->>'enrollment_no'
+  )
+  on conflict (id) do update set
+    full_name = coalesce(excluded.full_name, profiles.full_name),
+    enrollment_no = coalesce(excluded.enrollment_no, profiles.enrollment_no);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Drop trigger if exists and recreate
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
 -- Subjects: everyone can read, admin can manage
 create policy "Subjects are viewable by everyone" on subjects for select using (true);
 create policy "Admins can insert subjects" on subjects for insert with check (

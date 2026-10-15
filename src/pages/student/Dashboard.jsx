@@ -135,24 +135,26 @@ export default function Dashboard() {
 
         setUpcomingExams(uncompletedExams.slice(0, 5))
 
-        // Check for new notes or exams added in the last 7 days or since last view
-        const now = Date.now()
-        const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString()
+        // Get persistent timestamp of when the user last acknowledged announcements
+        const lastSeenKey = `pgi_last_seen_announcements_${user.id}`
+        const lastSeenTimeStr = localStorage.getItem(lastSeenKey)
+        const lastSeenTime = lastSeenTimeStr ? new Date(lastSeenTimeStr).getTime() : 0
 
-        const recentExams = uncompletedExams.filter(
-          (e) => !e.created_at || e.created_at >= sevenDaysAgo
-        )
-        const recentNotes = (recentNotesRes.data || []).filter(
-          (n) => !n.created_at || n.created_at >= sevenDaysAgo
-        )
+        // Only show items that were created AFTER the user's last acknowledgment
+        const brandNewExams = uncompletedExams.filter((e) => {
+          if (!e.created_at) return false
+          return new Date(e.created_at).getTime() > lastSeenTime
+        })
 
-        // Check if student has already dismissed the popup this session
-        const sessionDismissed = sessionStorage.getItem(`pgi_notif_seen_${user.id}`)
+        const brandNewNotes = (recentNotesRes.data || []).filter((n) => {
+          if (!n.created_at) return false
+          return new Date(n.created_at).getTime() > lastSeenTime
+        })
 
-        if ((recentExams.length > 0 || recentNotes.length > 0) && !sessionDismissed) {
+        if (brandNewExams.length > 0 || brandNewNotes.length > 0) {
           setNewAnnouncements({
-            newExams: recentExams.slice(0, 4),
-            newNotes: recentNotes.slice(0, 4)
+            newExams: brandNewExams.slice(0, 4),
+            newNotes: brandNewNotes.slice(0, 4)
           })
           setShowNotificationModal(true)
         }
@@ -168,7 +170,12 @@ export default function Dashboard() {
 
   const handleDismissNotification = () => {
     if (user?.id) {
-      sessionStorage.setItem(`pgi_notif_seen_${user.id}`, 'true')
+      // Mark current timestamp so the modal won't show again across logins
+      // until the admin uploads newer exams or notes.
+      localStorage.setItem(
+        `pgi_last_seen_announcements_${user.id}`,
+        new Date().toISOString()
+      )
     }
     setShowNotificationModal(false)
   }

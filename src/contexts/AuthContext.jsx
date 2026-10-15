@@ -111,13 +111,17 @@ export function AuthProvider({ children }) {
         enrollment_no: enrollmentNo || null,
       }
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(newProfile)
+      // Try upserting profile if user has active session; if blocked by RLS, log warning without breaking account creation
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert(newProfile)
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError.message)
-        throw profileError
+        if (profileError) {
+          console.warn('Profile upsert notice (may be handled by DB trigger or pending verification):', profileError.message)
+        }
+      } catch (err) {
+        console.warn('Could not insert profile from client:', err)
       }
 
       setUser(data.user)
