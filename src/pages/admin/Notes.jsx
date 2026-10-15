@@ -95,12 +95,29 @@ export default function Notes() {
     setFormData({ title: '', description: '', subject_id: '' })
   }
 
+  // Map file extensions to correct MIME types for Supabase storage
+  const getContentType = (file) => {
+    const ext = file.name.split('.').pop().toLowerCase()
+    const mimeMap = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }
+    // Use browser-reported type if available, fall back to extension map
+    return file.type || mimeMap[ext] || 'application/octet-stream'
+  }
+
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      // 50 MB limit
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error('File size cannot exceed 50 MB')
+      // 100 MB limit (update bucket limit in Supabase dashboard to match)
+      const MAX_SIZE_MB = 100
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        toast.error(`File size cannot exceed ${MAX_SIZE_MB} MB`)
         e.target.value = ''
         setSelectedFile(null)
         return
@@ -144,7 +161,8 @@ export default function Notes() {
         .from('notes')
         .upload(storagePath, selectedFile, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: getContentType(selectedFile)
         })
 
       if (uploadError) {
@@ -517,7 +535,7 @@ export default function Notes() {
                             <span className="pl-1">or drag and drop</span>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            PDF, DOC, DOCX, PPT, PPTX up to 50MB
+                            PDF, DOC, DOCX, PPT, PPTX up to 100MB
                           </p>
                         </div>
                       )}

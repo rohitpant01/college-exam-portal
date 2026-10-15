@@ -192,8 +192,37 @@ create policy "Students can update responses" on exam_responses for update using
   exists (select 1 from exam_attempts where id = attempt_id and student_id = auth.uid())
 );
 
--- Create storage bucket for notes
-insert into storage.buckets (id, name, public) values ('notes', 'notes', true);
+-- Create storage bucket for notes (100 MB per file, common document types)
+-- If the bucket already exists, update its settings instead
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'notes',
+  'notes',
+  true,
+  104857600,  -- 100 MB in bytes
+  array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/octet-stream'
+  ]
+)
+on conflict (id) do update set
+  file_size_limit = 104857600,
+  allowed_mime_types = array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/octet-stream'
+  ];
 
 -- Storage policies
 create policy "Anyone can read notes files" on storage.objects for select using (bucket_id = 'notes');
