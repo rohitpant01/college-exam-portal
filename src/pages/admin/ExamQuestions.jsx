@@ -44,7 +44,8 @@ export default function ExamQuestions() {
     option_c: '',
     option_d: '',
     correct_option: 'a',
-    marks: 1
+    marks: 1,
+    explanation: ''
   })
 
   // Bulk Add Modal
@@ -120,7 +121,8 @@ export default function ExamQuestions() {
       option_c: '',
       option_d: '',
       correct_option: 'a',
-      marks: 1
+      marks: 1,
+      explanation: ''
     })
     setIsModalOpen(true)
   }
@@ -134,7 +136,8 @@ export default function ExamQuestions() {
       option_c: q.option_c || '',
       option_d: q.option_d || '',
       correct_option: q.correct_option ? q.correct_option.toLowerCase() : 'a',
-      marks: q.marks || 1
+      marks: q.marks || 1,
+      explanation: q.explanation || ''
     })
     setIsModalOpen(true)
   }
@@ -169,7 +172,8 @@ export default function ExamQuestions() {
         option_c: formData.option_c.trim(),
         option_d: formData.option_d.trim(),
         correct_option: formData.correct_option.toLowerCase(),
-        marks: parseInt(formData.marks, 10) || 1
+        marks: parseInt(formData.marks, 10) || 1,
+        explanation: formData.explanation?.trim() || null
       }
 
       if (editingQuestion) {
@@ -380,6 +384,7 @@ export default function ExamQuestions() {
           }
 
           const marks = parseInt(item.marks, 10) || 1
+          const explanation = item.explanation || item.explain || item.solution || null
 
           if (qText && optA && optB && ['a', 'b', 'c', 'd'].includes(ans)) {
             validQuestions.push({
@@ -389,7 +394,8 @@ export default function ExamQuestions() {
               option_c: optC || 'None of the above',
               option_d: optD || 'All of the above',
               correct_option: ans,
-              marks: marks
+              marks: marks,
+              explanation: explanation ? String(explanation).trim() : null
             })
           } else {
             jsonErrors.push(`JSON Item #${idx + 1} (${qText ? qText.substring(0, 30) + '...' : 'untitled'}) is missing fields or valid answer.`)
@@ -432,6 +438,7 @@ export default function ExamQuestions() {
           if (ans === '4') ans = 'd'
 
           const marks = parseInt(row[6], 10) || 1
+          const explanation = row[7] ? row[7].trim() : null
 
           if (qText && optA && optB && optC && optD && ['a', 'b', 'c', 'd'].includes(ans)) {
             csvQuestions.push({
@@ -441,7 +448,8 @@ export default function ExamQuestions() {
               option_c: optC,
               option_d: optD,
               correct_option: ans,
-              marks: marks
+              marks: marks,
+              explanation: explanation || null
             })
           }
         }
@@ -453,7 +461,7 @@ export default function ExamQuestions() {
       }
     }
 
-    // 3. Fallback: MNC Plain Text Format (Q: ... A) ... Answer: B)
+    // 3. Fallback: MNC Plain Text Format (Q: ... A) ... Answer: B ... Explanation: ...)
     const lines = raw.split('\n')
     const chunks = []
     let currentChunk = []
@@ -492,6 +500,7 @@ export default function ExamQuestions() {
       let optD = ''
       let answer = ''
       let marks = 1
+      let explanation = ''
 
       chunkLines.forEach((l) => {
         if (/^Q(\d+)?[:.]/i.test(l) || /^Question(\s*\d+)?[:.]/i.test(l) || /^\d+\./.test(l)) {
@@ -510,6 +519,10 @@ export default function ExamQuestions() {
         } else if (/^Marks[:.]\s*/i.test(l)) {
           const m = parseInt(l.replace(/^Marks[:.]\s*/i, '').trim(), 10)
           if (!isNaN(m) && m > 0) marks = m
+        } else if (/^(?:Explanation|Explain|Solution)[:.]\s*/i.test(l)) {
+          explanation = l.replace(/^(?:Explanation|Explain|Solution)[:.]\s*/i, '').trim()
+        } else if (explanation) {
+          explanation += ' ' + l
         } else if (!qText && !optA) {
           qText += ' ' + l
         }
@@ -525,7 +538,8 @@ export default function ExamQuestions() {
           option_c: optC,
           option_d: optD,
           correct_option: answer,
-          marks: marks
+          marks: marks,
+          explanation: explanation.trim() || null
         })
       }
     })
@@ -998,6 +1012,14 @@ Marks: 2`
                       )}
                     </div>
                   </div>
+
+                  {/* Explanation Preview (if available) */}
+                  {q.explanation && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 flex items-start gap-2">
+                      <span className="font-bold shrink-0 text-amber-800">💡 Solution Hint / Explanation:</span>
+                      <p className="flex-1 whitespace-pre-line leading-relaxed">{q.explanation}</p>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -1158,6 +1180,21 @@ Marks: 2`
                       Assign different weightage (e.g. 1 mark for easy, 2 or 3 for medium/hard questions).
                     </p>
                   </div>
+                </div>
+
+                {/* Explanation Field */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>Explanation / Solution Hint</span>
+                    <span className="text-xs text-slate-400 font-normal">Optional — shown during detailed review</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.explanation}
+                    onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
+                    placeholder="Provide detailed reasoning, step-by-step solution, or reference formula for students..."
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
+                  />
                 </div>
 
                 <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-slate-100">

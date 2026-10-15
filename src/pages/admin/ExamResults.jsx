@@ -778,6 +778,14 @@ export default function ExamResults() {
                                 )
                               })}
                             </div>
+
+                            {/* Explanation preview if exists */}
+                            {q.explanation && (
+                              <div className="mt-3.5 p-3.5 rounded-lg bg-amber-50/80 border border-amber-200 text-xs text-amber-950">
+                                <span className="font-bold text-amber-900 block mb-1">💡 Explanation / Solution:</span>
+                                <p className="whitespace-pre-line leading-relaxed">{q.explanation}</p>
+                              </div>
+                            )}
                           </div>
                         )
                       })}

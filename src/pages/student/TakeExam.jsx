@@ -17,7 +17,9 @@ import {
   RotateCcw,
   BookOpen,
   ArrowLeft,
-  ShieldAlert
+  ShieldAlert,
+  Maximize,
+  Minimize
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -44,6 +46,37 @@ export default function TakeExam() {
   const [timeRemaining, setTimeRemaining] = useState(0) // Seconds
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
+
+  // Fullscreen Request / Exit Helpers
+  const requestFullScreen = async () => {
+    try {
+      const el = document.documentElement
+      if (el.requestFullscreen) {
+        await el.requestFullscreen()
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen()
+      } else if (el.msRequestFullscreen) {
+        await el.msRequestFullscreen()
+      }
+    } catch (err) {
+      console.warn('Fullscreen request bypassed or blocked by browser:', err)
+    }
+  }
+
+  const exitFullScreen = async () => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if (document.webkitExitFullscreen) {
+          await document.webkitExitFullscreen()
+        }
+      }
+    } catch (err) {
+      console.warn('Error exiting fullscreen:', err)
+    }
+  }
 
   // Anti-Cheat & Tab Switch Tracking
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
@@ -256,7 +289,8 @@ export default function TakeExam() {
       setExamStarted(true)
       setCurrentIndex(0)
       setVisitedQuestions(new Set([0]))
-      toast.success('Exam started! Good luck.')
+      await requestFullScreen()
+      toast.success('Exam started! Fullscreen mode enabled.')
     } catch (err) {
       console.error('Failed to start exam:', err)
       toast.error('Could not start exam. Please try again.')
@@ -337,6 +371,7 @@ export default function TakeExam() {
           toast.success('Exam submitted successfully!')
         }
 
+        await exitFullScreen()
         navigate(`/student/results/${activeAttempt.id}`, { replace: true })
       } catch (err) {
         console.error('Submission failed:', err)
@@ -415,19 +450,23 @@ export default function TakeExam() {
       triggerSwitchViolation()
     }
 
-    const handleBeforeUnload = (e) => {
-      e.preventDefault()
-      e.returnValue = 'Your exam is currently in progress. Leaving will submit or forfeit your attempt.'
+    const handleFullScreenChange = () => {
+      const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+      setIsFullScreen(active)
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleWindowBlur)
     window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('fullscreenchange', handleFullScreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullScreenChange)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('fullscreenchange', handleFullScreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullScreenChange)
     }
   }, [examStarted, isSubmitting, handleFinalSubmit])
 
@@ -670,6 +709,9 @@ export default function TakeExam() {
                   <li className="text-amber-700 bg-amber-50/70 p-2 rounded border border-amber-200">
                     <strong className="text-amber-900 font-bold">Strict Proctored Rule:</strong> Tab switching, opening other apps, or minimizing the exam window is strictly monitored. You will receive <strong>1 warning</strong>, and on the <strong>2nd attempt</strong>, the exam will be <strong>automatically submitted</strong>.
                   </li>
+                  <li className="text-indigo-700 bg-indigo-50/70 p-2 rounded border border-indigo-200">
+                    <strong className="text-indigo-900 font-bold">Auto Fullscreen Mode:</strong> The exam starts in secure full screen mode automatically. Please stay in full screen until you submit your test.
+                  </li>
                 </ul>
               </div>
 
@@ -744,6 +786,30 @@ export default function TakeExam() {
               />
               <span>{formatTimer(timeRemaining)}</span>
             </div>
+
+            {/* Fullscreen Toggle Button */}
+            <button
+              type="button"
+              onClick={isFullScreen ? exitFullScreen : requestFullScreen}
+              className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                isFullScreen
+                  ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+              }`}
+              title={isFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullScreen ? (
+                <>
+                  <Minimize className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Exit Fullscreen</span>
+                </>
+              ) : (
+                <>
+                  <Maximize className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Fullscreen</span>
+                </>
+              )}
+            </button>
 
             {/* Quick Submit */}
             <button

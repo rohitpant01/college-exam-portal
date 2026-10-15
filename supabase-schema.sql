@@ -59,7 +59,8 @@ create table public.questions (
   option_d text not null,
   correct_option text not null check (correct_option in ('a', 'b', 'c', 'd')),
   marks integer default 1,
-  order_num integer default 0
+  order_num integer default 0,
+  explanation text
 );
 
 -- Exam attempts table

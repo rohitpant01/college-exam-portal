@@ -455,6 +455,19 @@ export default function ExamResult() {
                         )
                       })}
                   </div>
+
+                  {/* Explanation / Solution Details (if admin uploaded it) */}
+                  {q.explanation && (
+                    <div className="mt-4 p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 shadow-2xs">
+                      <div className="flex items-center gap-2 mb-1.5 text-xs font-bold text-amber-900 uppercase tracking-wider">
+                        <HelpCircle className="w-4 h-4 text-amber-600" />
+                        <span>Explanation & Solution</span>
+                      </div>
+                      <p className="text-sm text-amber-950 whitespace-pre-wrap leading-relaxed">
+                        {q.explanation}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )
             })}
