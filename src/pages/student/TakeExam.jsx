@@ -455,6 +455,11 @@ export default function TakeExam() {
       setIsFullScreen(active)
     }
 
+    const handleBeforeUnload = (e) => {
+      e.preventDefault()
+      e.returnValue = 'Your exam is currently in progress. Leaving will submit or forfeit your attempt.'
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleWindowBlur)
     window.addEventListener('beforeunload', handleBeforeUnload)
